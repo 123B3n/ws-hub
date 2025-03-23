@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WS-Hub Client Example</title>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .log-container {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            font-family: monospace;
+        }
+        .log-item {
+            margin: 5px 0;
+            word-wrap: break-word;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            background-color: #f5f5f5;
+        }
+        .tab.active {
+            background-color: white;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 0 8px 8px 8px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>WS-Hub WebSocket Client Example</h1>
+    
+    <div class="card">
+        <h2>Connection Settings</h2>
+        <div>
+            <label for="server-url">Server URL:</label>
+            <input type="text" id="server-url" value="http://localhost:8080" />
+        </div>
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" value="TestUser" />
+        </div>
+        <div>
+            <button id="connect-btn">Connect</button>
+            <button id="disconnect-btn" disabled>Disconnect</button>
+            <span id="connection-status">Disconnected</span>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="general">General Events</div>
+        <div class="tab" data-tab="direct">Direct Messages</div>
+        <div class="tab" data-tab="notifications">Notifications</div>
+        <div class="tab" data-tab="data">User Data</div>
+    </div>
+
+    <div class="tab-content active" id="general-tab">
+        <h3>General Broadcast</h3>
+        <div>
+            <label for="general-type">Message Type:</label>
+            <input type="text" id="general-type" value="chatMessage" />
+        </div>
+        <div>
+            <label for="general-content">Content:</label>
+            <textarea id="general-content" rows="3">{"message": "Hello everyone!"}</textarea>
+        </div>
+        <button id="send-general-btn" disabled>Broadcast Message</button>
+    </div>
+
+    <div class="tab-content" id="direct-tab">
+        <h3>Direct Message</h3>
+        <div>
+            <label for="direct-recipient">Recipient Username:</label>
+            <input type="text" id="direct-recipient" placeholder="Username of recipient" />
+        </div>
+        <div>
+            <label for="direct-type">Message Type:</label>
+            <input type="text" id="direct-type" value="privateMessage" />
+        </div>
+        <div>
+            <label for="direct-content">Content:</label>
+            <textarea id="direct-content" rows="3" placeholder="Type your message here...">{"message": "Hello just to you!"}</textarea>
+        </div>
+        <div>
+            <span id="typing-status"></span>
+        </div>
+        <button id="send-direct-btn" disabled>Send Direct Message</button>
+    </div>
+
+    <div class="tab-content" id="notifications-tab">
+        <h3>Send Notification to Followers</h3>
+        <div>
+            <label for="notification-type">Notification Type:</label>
+            <select id="notification-type">
+                <option value="post">Post</option>
+                <option value="comment">Comment</option>
+                <option value="like">Like</option>
+                <option value="follow">Follow</option>
+                <option value="announcement">Announcement</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+        <div>
+            <label for="notification-content">Content:</label>
+            <textarea id="notification-content" rows="3">{"postId": "123", "title": "New post", "summary": "Check out my new content"}</textarea>
+        </div>
+        <button id="send-notification-btn" disabled>Send Notification</button>
+    </div>
+
+    <div class="tab-content" id="data-tab">
+        <h3>Update User Data</h3>
+        <div>
+            <label for="following-list">Following (comma separated):</label>
+            <input type="text" id="following-list" value="user1,user2" />
+        </div>
+        <div>
+            <label for="profile-data">Profile Data:</label>
+            <textarea id="profile-data" rows="3">{"displayName": "Test User", "avatar": "https://example.com/avatar.png", "bio": "Just testing this WebSocket server"}</textarea>
+        </div>
+        <button id="update-data-btn" disabled>Update User Data</button>
+    </div>
+
+    <div class="card">
+        <h2>Event Log</h2>
+        <div class="log-container" id="log"></div>
+        <button id="clear-log-btn">Clear Log</button>
+    </div>
+
+    <script>
+        let socket;
+        let socketId;
+        let connected = false;
+
+        // DOM elements
+        const connectBtn = document.getElementById('connect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const connectionStatus = document.getElementById('connection-status');
+        const logContainer = document.getElementById('log');
+        const clearLogBtn = document.getElementById('clear-log-btn');
+        const sendGeneralBtn = document.getElementById('send-general-btn');
+        const sendDirectBtn = document.getElementById('send-direct-btn');
+        const sendNotificationBtn = document.getElementById('send-notification-btn');
+        const updateDataBtn = document.getElementById('update-data-btn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Tab handling
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // Remove active class from all tabs and contents
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and its content
+                tab.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+
+        // Connect to server
+        connectBtn.addEventListener('click', () => {
+            const serverUrl = document.getElementById('server-url').value;
+            const username = document.getElementById('username').value;
+            
+            if (!serverUrl) {
+                logMessage('Please enter a server URL', 'error');
+                return;
+            }
+            
+            try {
+                // Use additional options for local file testing
+                socket = io(serverUrl, {
+                    path: '/socket.io',
+                    reconnection: true,
+                    reconnectionAttempts: 5,
+                    reconnectionDelay: 1000,
+                    // CORS-related settings
+                    withCredentials: false,
+                    extraHeaders: {},
+                    // For development/testing
+                    forceNew: true,
+                    transports: ['polling', 'websocket']
+                });
+                
+                // Connection event handlers
+                socket.on('connect', () => {
+                    connected = true;
+                    socketId = socket.id;
+                    connectionStatus.textContent = `Connected (${socketId})`;
+                    logMessage(`Connected to server with ID: ${socketId}`, 'success');
+                    
+                    // Enable/disable buttons
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    sendGeneralBtn.disabled = false;
+                    sendDirectBtn.disabled = false;
+                    sendNotificationBtn.disabled = false;
+                    updateDataBtn.disabled = false;
+                });
+                
+                // System events
+                socket.on('system:error', (error) => {
+                    logMessage(`Error ${error.code}: ${error.message}`, 'error');
+                    
+                    // Handle specific error codes
+                    switch(error.code) {
+                        case 'NO_USERNAME':
+                            logMessage('Please set a username first', 'error');
+                            break;
+                        case 'INVALID_FORMAT':
+                            logMessage('Invalid message format', 'error');
+                            break;
+                        case 'TARGET_NOT_FOUND':
+                            logMessage('Recipient not found', 'error');
+                            break;
+                        case 'RATE_LIMIT':
+                            logMessage('Sending messages too quickly', 'error');
+                            break;
+                        default:
+                            logMessage(`Unhandled error: ${error.message}`, 'error');
+                    }
+                });
+
+                // Server statistics
+                socket.on('system:stats', (data) => {
+                    logMessage(`Server stats - Active: ${data.activeConnections}, Total: ${data.totalConnections}`, 'info');
+                });
+
+                // Certificate refresh handling
+                socket.on('system:certificateRefresh', (data) => {
+                    logMessage(data.message, 'warning');
+                    // Automatically reconnect after a short delay
+                    setTimeout(() => {
+                        if (socket && connected) {
+                            socket.disconnect().connect();
+                        }
+                    }, 5000);
+                });
+                
+                // System event handlers
+                socket.on('system:welcome', (data) => {
+                    logMessage(`Welcome message: ${data.message}`, 'info');
+                });
+                
+                socket.on('system:dataSet', (data) => {
+                    if (data.success) {
+                        logMessage(`Data updated: ${data.updatedFields.join(', ')}`, 'success');
+                    } else {
+                        logMessage(`Data update failed: ${data.error}`, 'error');
+                    }
+                });
+                
+                // General broadcast handler
+                socket.on('system:general', (data) => {
+                    logMessage(`Broadcast from ${data.sender.username}: ${data.type} - ${JSON.stringify(data)}`, 'info');
+                });
+                
+                socket.on('system:generalSent', (data) => {
+                    if (data.success) {
+                        logMessage(`Broadcast sent at ${data.timestamp}`, 'success');
+                    }
+                });
+                
+                // Direct message handler
+                socket.on('system:direct', (data) => {
+                    logMessage(`Message from ${data.sender.username}: ${data.type} - ${JSON.stringify(data)}`, 'info');
+                });
+                
+                socket.on('system:directSent', (data) => {
+                    if (data.success) {
+                        logMessage(`Message sent to ${data.target}`, 'success');
+                    } else {
+                        logMessage(`Failed to send message: ${data.reason}`, 'error');
+                    }
+                });
+                
+                // Typing indicator handler
+                socket.on('system:typingUpdate', (data) => {
+                    const status = data.isTyping ? 
+                        `${data.sender.username} is typing...` : 
+                        `${data.sender.username} has stopped typing`;
+                    
+                    document.getElementById('typing-status').textContent = 
+                        data.isTyping ? `${data.sender.username} is typing...` : '';
+                });
+
+                // Client ping (keep-alive)
+                setInterval(() => {
+                    if (connected) {
+                        socket.emit('client-ping');
+                    }
+                }, 30000); // Every 30 seconds
+
+                socket.on('client-pong', (data) => {
+                    console.log('Server pong received:', data.timestamp);
+                });
+                
+                // Heartbeat handler
+                socket.on('system:heartbeat', (data) => {
+                    socket.emit('system:heartbeat-ack', { 
+                        id: data.id,
+                        timestamp: new Date()
+                    });
+                });
+
+                socket.on('system:heartbeat-warning', (data) => {
+                    logMessage(`Connection warning: ${data.message}`, 'warning');
+                });
+                
+            } catch (error) {
+                logMessage(`Connection error: ${error.message}`, 'error');
+            }
+        });
+
+        // Disconnect from server
+        disconnectBtn.addEventListener('click', () => {
+            if (socket && connected) {
+                socket.disconnect();
+            }
+        });
+
+        // Send general message
+        sendGeneralBtn.addEventListener('click', () => {
+            if (!socket || !connected) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            try {
+                const msgType = document.getElementById('general-type').value;
+                const contentStr = document.getElementById('general-content').value;
+                const content = JSON.parse(contentStr);
+                
+                const data = {
+                    type: msgType,
+                    ...content
+                };
+                
+                socket.emit('system:general', data);
+                logMessage(`Sending broadcast: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logMessage(`Error sending message: ${error.message}`, 'error');
+            }
+        });
+
+        // Send direct message
+        sendDirectBtn.addEventListener('click', () => {
+            if (!socket || !connected) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            try {
+                const username = document.getElementById('direct-recipient').value;
+                const msgType = document.getElementById('direct-type').value;
+                const contentStr = document.getElementById('direct-content').value;
+                const content = JSON.parse(contentStr);
+                
+                if (!username) {
+                    logMessage('Please enter a recipient username', 'error');
+                    return;
+                }
+                
+                const data = {
+                    target: username,
+                    type: msgType,
+                    ...content
+                };
+                
+                socket.emit('system:direct', data);
+                logMessage(`Sending direct message to ${username}: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logMessage(`Error sending direct message: ${error.message}`, 'error');
+            }
+        });
+
+        // Send notification
+        sendNotificationBtn.addEventListener('click', () => {
+            if (!socket || !connected) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            try {
+                const notificationType = document.getElementById('notification-type').value;
+                const contentStr = document.getElementById('notification-content').value;
+                const content = JSON.parse(contentStr);
+                
+                const data = {
+                    type: notificationType,
+                    content: content
+                };
+                
+                socket.emit('system:notification', data);
+                logMessage(`Sending notification: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logMessage(`Error sending notification: ${error.message}`, 'error');
+            }
+        });
+
+        // Update user data
+        updateDataBtn.addEventListener('click', () => {
+            if (!socket || !connected) {
+                logMessage('Not connected to server', 'error');
+                return;
+            }
+            
+            try {
+                const username = document.getElementById('username').value;
+                const followingStr = document.getElementById('following-list').value;
+                const profileStr = document.getElementById('profile-data').value;
+                
+                const following = followingStr.split(',').map(u => u.trim()).filter(u => u);
+                const profile = JSON.parse(profileStr);
+                
+                const data = {
+                    username,
+                    following,
+                    profile
+                };
+                
+                socket.emit('system:setData', data);
+                logMessage(`Updating user data: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logMessage(`Error updating user data: ${error.message}`, 'error');
+            }
+        });
+
+        // Clear log
+        clearLogBtn.addEventListener('click', () => {
+            logContainer.innerHTML = '';
+        });
+
+        // Log message helper
+        function logMessage(message, type = 'normal') {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item ${type}`;
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logItem);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Setup typing events for direct message textarea
+        let typingTimer;
+        const doneTypingInterval = 1000; // 1 second
+        let isCurrentlyTyping = false;
+        
+        document.getElementById('direct-content').addEventListener('keyup', function() {
+            const recipient = document.getElementById('direct-recipient').value;
+            
+            if (!socket || !connected || !recipient) {
+                return;
+            }
+            
+            // Only send typing events if we have content and a recipient
+            if (this.value.length > 0) {
+                // Clear the timeout
+                clearTimeout(typingTimer);
+                
+                // If not already typing, send start typing event
+                if (!isCurrentlyTyping) {
+                    socket.emit('system:typingStart', { target: recipient });
+                    isCurrentlyTyping = true;
+                }
+                
+                // Set a timeout to consider typing has stopped
+                typingTimer = setTimeout(() => {
+                    socket.emit('system:typingStop', { target: recipient });
+                    isCurrentlyTyping = false;
+                }, doneTypingInterval);
+            } else {
+                // Content is empty, send stop typing
+                clearTimeout(typingTimer);
+                if (isCurrentlyTyping) {
+                    socket.emit('system:typingStop', { target: recipient });
+                    isCurrentlyTyping = false;
+                }
+            }
+        });
+        
+        document.getElementById('direct-content').addEventListener('keydown', function() {
+            // Clear the timeout on keydown
+            clearTimeout(typingTimer);
+        });
+        
+        // Also reset typing status when message is sent
+        const originalSendDirectHandler = document.getElementById('send-direct-btn').onclick;
+        
+        document.getElementById('send-direct-btn').onclick = function() {
+            const recipient = document.getElementById('direct-recipient').value;
+            
+            // Reset typing status when sending a message
+            if (isCurrentlyTyping && recipient) {
+                socket.emit('system:typingStop', { target: recipient });
+                isCurrentlyTyping = false;
+            }
+            
+            // Call the original handler
+            if (originalSendDirectHandler) {
+                originalSendDirectHandler.apply(this, arguments);
+            }
+        };
+    </script>
+</body>
+</html>
