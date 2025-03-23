@@ -1,7 +1,16 @@
 # WS-Hub WebSocket Server
 
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/license-GPL-3.0-blue)](LICENSE)
+<div align="center">
+
+[![Build Status](https://github.com/123B3n/ws-hub/workflows/Build%20and%20Test/badge.svg)](https://github.com/123B3n/ws-hub/actions)
+[![Latest Release](https://img.shields.io/github/v/release/123B3n/ws-hub)](https://github.com/123B3n/ws-hub/releases)
+[![GitHub package.json version](https://img.shields.io/github/package-json/v/123B3n/ws-hub)](package.json)
+[![License](https://img.shields.io/github/license/123B3n/ws-hub)](LICENSE)
+[![Dependencies Status](https://status.david-dm.org/gh/123B3n/ws-hub.svg)](https://david-dm.org/123B3n/ws-hub)
+[![Node.js Version](https://img.shields.io/node/v/ws-hub)](package.json)
+[![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/123B3n/ws-hub)](https://github.com/123B3n/ws-hub)
+
+</div>
 
 A robust Socket.IO WebSocket server providing real-time bidirectional communication with secure connections support and flexible deployment options.
 
