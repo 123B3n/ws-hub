@@ -1,0 +1,65 @@
+name: Sync Documentation to Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/wiki-sync.yml'
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup directories
+        run: |
+          mkdir -p wiki-content
+          
+      - name: Prepare Wiki Content
+        run: |
+          # Copy documentation files to wiki-content directory with adjusted names
+          cp docs/iis-guide.md wiki-content/IIS-Integration-Guide.md
+          cp docs/cloudflare-guide.md wiki-content/Cloudflare-Guide.md
+          cp docs/configuration-guide.md wiki-content/Configuration-Guide.md
+          cp docs/client-integration.md wiki-content/Client-Integration-Guide.md
+          cp docs/api-documentation.md wiki-content/API-Documentation.md
+          cp docs/troubleshooting.md wiki-content/Troubleshooting-Guide.md
+          cp docs/client-data.md wiki-content/Client-Data-Structure.md
+          cp docs/development-guide.md wiki-content/Development-Guide.md
+          cp docs/socket-event-details.md wiki-content/Socket-Event-Details.md
+          
+          # Create Home page with updated links
+          cat > wiki-content/Home.md << 'EOL'
+          # WS-Hub Documentation
+
+          Welcome to the WS-Hub documentation. This wiki provides comprehensive guides for installing, configuring, and using the WebSocket server.
+
+          ## Available Guides
+
+          - [IIS Integration Guide](IIS-Integration-Guide) - Deploy with Microsoft IIS
+          - [Cloudflare Guide](Cloudflare-Guide) - Using Cloudflare for SSL and security
+          - [Configuration Guide](Configuration-Guide) - Configure the server
+          - [Client Integration Guide](Client-Integration-Guide) - Connect from client applications
+          - [API Documentation](API-Documentation) - WebSocket event references
+          - [Troubleshooting Guide](Troubleshooting-Guide) - Solve common issues
+          - [Client Data Structure](Client-Data-Structure) - Understanding user data
+          - [Development Guide](Development-Guide) - Extend server functionality
+          - [Socket Event Details](Socket-Event-Details) - Detailed event documentation
+
+          ## Quick Links
+
+          - [GitHub Repository](https://github.com/123B3n/ws-hub)
+          - [Report an Issue](https://github.com/123B3n/ws-hub/issues/new/choose)
+          EOL
+
+      - name: Upload Wiki Content
+        uses: SwiftDocOrg/github-wiki-publish-action@v1
+        with:
+          path: "wiki-content"
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
