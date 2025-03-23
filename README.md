@@ -3,6 +3,7 @@
 <div align="center">
 
 [![Build and Release](https://github.com/123B3n/ws-hub/workflows/Build%20and%20Release/badge.svg)](https://github.com/123B3n/ws-hub/actions/workflows/manual-build-release.yml)
+[![CI](https://github.com/123B3n/ws-hub/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/123B3n/ws-hub/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/123B3n/ws-hub)](https://github.com/123B3n/ws-hub/releases)
 [![GitHub package.json version](https://img.shields.io/github/package-json/v/123B3n/ws-hub)](package.json)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
