@@ -1,0 +1,38 @@
+{
+  "server": {
+    "httpPort": 8080,
+    "httpsPort": 8443,
+    "host": "0.0.0.0"
+  },
+  "heartbeat": {
+    "enabled": true,
+    "interval": 30000,
+    "timeout": 5000,
+    "maxMissed": 5
+  },
+  "security": {
+    "corsOrigins": ["*"],
+    "disableCors": true,
+    "maxMessageSize": 102400,
+    "rateLimit": {
+      "enabled": false,
+      "maxRequestsPerMinute": 300
+    }
+  },
+  "logging": {
+    "level": "debug",
+    "logToFile": true,
+    "logDir": "logs",
+    "logClientEvents": false
+  },
+  "notifications": {
+    "maxFollowerNotifications": 10000,
+    "throttleMs": 0,
+    "maxContentSize": 10240
+  },
+  "customSettings": {
+    "appName": "WebSocket Server",
+    "appVersion": "1.0.0",
+    "adminContact": "admin@example.com"
+  }
+}
