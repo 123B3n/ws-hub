@@ -1,0 +1,131 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+      releaseTitle:
+        description: 'Release title'
+        required: true
+        default: 'WebSocket Server Release'
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Update version in package.json
+      run: |
+        npm version ${{ github.event.inputs.version }} --no-git-tag-version
+        echo "Version updated to ${{ github.event.inputs.version }}"
+    
+    - name: Update version in configurations
+      run: |
+        # Update version in customSettings of config files
+        jq '.customSettings.appVersion = "${{ github.event.inputs.version }}"' config.json > tmp.json && mv tmp.json config.json
+        if [ -f config.production.json ]; then
+          jq '.customSettings.appVersion = "${{ github.event.inputs.version }}"' config.production.json > tmp.json && mv tmp.json config.production.json
+        fi
+    
+    - name: Build project
+      run: npm run build
+    
+    - name: Create build artifact
+      run: |
+        # Create dist folder structure
+        mkdir -p release/server-${{ github.event.inputs.version }}
+        
+        # Copy build files
+        cp -r dist release/server-${{ github.event.inputs.version }}/
+        cp -r example release/server-${{ github.event.inputs.version }}/
+        cp -r client-example.html release/server-${{ github.event.inputs.version }}/
+        
+        # Copy configuration files
+        cp config.json release/server-${{ github.event.inputs.version }}/
+        if [ -f config.production.json ]; then
+          cp config.production.json release/server-${{ github.event.inputs.version }}/
+        fi
+        
+        # Copy only the README and LICENSE to the release
+        cp README.md release/server-${{ github.event.inputs.version }}/
+        cp LICENSE release/server-${{ github.event.inputs.version }}/
+        
+        # Include docs folder for offline documentation
+        mkdir -p release/server-${{ github.event.inputs.version }}/docs
+        cp -r docs/* release/server-${{ github.event.inputs.version }}/docs/
+        
+        # Copy scripts
+        cp package.json release/server-${{ github.event.inputs.version }}/
+        cp env-setup.js release/server-${{ github.event.inputs.version }}/
+        cp check-connectivity.js release/server-${{ github.event.inputs.version }}/
+        
+        # Create directories that might be needed
+        mkdir -p release/server-${{ github.event.inputs.version }}/certs
+        mkdir -p release/server-${{ github.event.inputs.version }}/logs
+        mkdir -p release/server-${{ github.event.inputs.version }}/iisnode
+        
+        # Create zip archive
+        cd release
+        zip -r server-${{ github.event.inputs.version }}.zip server-${{ github.event.inputs.version }}
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        # Get the latest tag (to compare changes since last release)
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        
+        if [ -z "$latest_tag" ]; then
+          # If no previous tag exists, use all commits
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "## What's Changed" >> $GITHUB_ENV
+          git log --pretty=format:"* %s" >> $GITHUB_ENV
+          echo -e "\n\nThis is the initial release of WebSocket Server." >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        else
+          # Get commits since the last tag
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "## What's Changed" >> $GITHUB_ENV
+          git log --pretty=format:"* %s" ${latest_tag}..HEAD >> $GITHUB_ENV
+          echo -e "\n\n**Full Changelog**: https://github.com/${{ github.repository }}/compare/${latest_tag}...v${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+        fi
+    
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ github.event.inputs.version }}
+        name: ${{ github.event.inputs.releaseTitle }} v${{ github.event.inputs.version }}
+        body: ${{ env.RELEASE_NOTES }}
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease }}
+        files: release/server-${{ github.event.inputs.version }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: server-${{ github.event.inputs.version }}
+        path: release/server-${{ github.event.inputs.version }}.zip
