@@ -32,7 +32,7 @@
   },
   "customSettings": {
     "appName": "WebSocket Server",
-    "appVersion": "1.0.0",
+    "appVersion": "1.0.1",
     "adminContact": "admin@example.com"
   }
 }

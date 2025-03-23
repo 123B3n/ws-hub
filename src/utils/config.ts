@@ -83,7 +83,7 @@ const defaultConfig: Config = {
   },
   customSettings: {
     appName: 'WebSocket Server',
-    appVersion: '1.0.0',
+    appVersion: '1.0.1',
     adminContact: 'admin@example.com',
     typingTimeout: 5000 // 5 second timeout for typing indicators
   }
