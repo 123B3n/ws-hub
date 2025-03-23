@@ -1,10 +1,10 @@
 /**
  * Socket.IO Event Handlers Module
- * 
+ *
  * This module handles Socket.IO connections and sets up the event handlers
  * for all WebSocket events. It serves as the central hub for coordinating
  * all communication between clients and the server.
- * 
+ *
  * The module:
  * - Creates and exports a singleton ClientManager instance
  * - Sets up event handlers for new socket connections
@@ -30,14 +30,14 @@ process.on('exit', () => {
 /**
  * Sets up all socket event handlers for the Socket.IO server
  * This is the main entry point for WebSocket event handling
- * 
+ *
  * @param io The Socket.IO server instance
  */
-export function setupSocketEventHandlers(io: Server): void {
+export function setupSocketEventHandlers (io: Server): void {
   console.log('Setting up Socket.IO event handlers');
 
   // Track server statistics for monitoring and diagnostics
-  let totalConnections = 0;  // Total connections since server start
+  let totalConnections = 0; // Total connections since server start
   let activeConnections = 0; // Current active connections
 
   // Handle new client connections
@@ -49,7 +49,7 @@ export function setupSocketEventHandlers(io: Server): void {
     // Log connection details with client information
     const clientInfo = extractClientInfo(socket);
     console.log(`Client connected: ${socket.id}`, clientInfo);
-    
+
     // Register client with the client manager
     clientManager.addClient(socket);
 
@@ -60,24 +60,24 @@ export function setupSocketEventHandlers(io: Server): void {
     socket.on('disconnect', (reason) => {
       activeConnections--;
       console.log(`Client disconnected: ${socket.id} (Reason: ${reason})`);
-      
+
       // Remove client from manager to prevent memory leaks
       clientManager.removeClient(socket.id);
-      
+
       // Emit server stats to all remaining clients
-      io.emit('system:stats', { 
-        activeConnections, 
-        totalConnections, 
-        timestamp: new Date() 
+      io.emit('system:stats', {
+        activeConnections,
+        totalConnections,
+        timestamp: new Date()
       });
     });
 
     // Emit server stats when a new client connects
     // This allows clients to show online user counts
-    io.emit('system:stats', { 
-      activeConnections, 
-      totalConnections, 
-      timestamp: new Date() 
+    io.emit('system:stats', {
+      activeConnections,
+      totalConnections,
+      timestamp: new Date()
     });
   });
 }
@@ -85,22 +85,22 @@ export function setupSocketEventHandlers(io: Server): void {
 /**
  * Sets up event handlers for a specific socket connection
  * This organizes the event handling into domains (general, direct, system, etc.)
- * 
+ *
  * @param socket The client's socket connection
  */
-function setupEventHandlers(socket: Socket): void {
+function setupEventHandlers (socket: Socket): void {
   // Handle general broadcast events (messages sent to all clients)
   handleGeneralEvents(socket);
-  
+
   // Handle direct message events (messages sent to specific clients)
   handleDirectEvents(socket);
-  
+
   // Handle system events (authentication, user data, etc.)
   handleSystemEvents(socket);
-  
+
   // Handle typing indicator events (showing when users are typing)
   handleTypingEvents(socket);
-  
+
   // Ensure we record heartbeat responses properly
   // This is critical for keeping track of client connectivity
   socket.on('system:heartbeat-ack', (data) => {
@@ -111,14 +111,14 @@ function setupEventHandlers(socket: Socket): void {
 /**
  * Extracts useful client information from socket handshake data
  * This helps with debugging and client identification
- * 
+ *
  * @param socket The client socket to extract information from
  * @returns An object containing client information
  */
-function extractClientInfo(socket: Socket): object {
+function extractClientInfo (socket: Socket): object {
   const info: Record<string, any> = {
     transport: socket.conn.transport.name, // websocket or polling
-    address: socket.handshake.address,     // IP address (may be proxied)
+    address: socket.handshake.address // IP address (may be proxied)
   };
 
   // Extract Cloudflare headers if present
@@ -126,9 +126,9 @@ function extractClientInfo(socket: Socket): object {
   const { headers } = socket.handshake;
   if (headers['cf-connecting-ip']) {
     info.cloudflare = {
-      ip: headers['cf-connecting-ip'],       // Real client IP
-      country: headers['cf-ipcountry'] || 'unknown',  // Client country code
-      ray: headers['cf-ray'] || 'unknown'    // Cloudflare Ray ID for tracing
+      ip: headers['cf-connecting-ip'], // Real client IP
+      country: headers['cf-ipcountry'] || 'unknown', // Client country code
+      ray: headers['cf-ray'] || 'unknown' // Cloudflare Ray ID for tracing
     };
   }
 

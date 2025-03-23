@@ -10,14 +10,14 @@ interface ServerConfig {
 
 interface HeartbeatConfig {
   enabled: boolean;
-  interval: number;  // milliseconds between heartbeats
-  timeout: number;   // milliseconds to wait for response
+  interval: number; // milliseconds between heartbeats
+  timeout: number; // milliseconds to wait for response
   maxMissed: number; // max number of missed heartbeats before disconnect
 }
 
 interface SecurityConfig {
   corsOrigins: string[];
-  disableCors: boolean;  // New option to completely disable CORS
+  disableCors: boolean; // New option to completely disable CORS
   maxMessageSize: number; // bytes
   rateLimit: {
     enabled: boolean;
@@ -34,8 +34,8 @@ interface LoggingConfig {
 
 interface NotificationConfig {
   maxFollowerNotifications: number; // maximum number of notifications to send at once
-  throttleMs: number;               // throttle notifications if sent too quickly
-  maxContentSize: number;           // maximum size of notification content
+  throttleMs: number; // throttle notifications if sent too quickly
+  maxContentSize: number; // maximum size of notification content
 }
 
 export interface Config {
@@ -57,13 +57,13 @@ const defaultConfig: Config = {
   },
   heartbeat: {
     enabled: true,
-    interval: 30000,  // 30 seconds
-    timeout: 5000,    // 5 seconds
-    maxMissed: 5      // 5 missed heartbeats = disconnect
+    interval: 30000, // 30 seconds
+    timeout: 5000, // 5 seconds
+    maxMissed: 5 // 5 missed heartbeats = disconnect
   },
   security: {
-    corsOrigins: ["*"],
-    disableCors: false,  // Default to CORS enabled
+    corsOrigins: ['*'],
+    disableCors: false, // Default to CORS enabled
     maxMessageSize: 100 * 1024, // 100KB
     rateLimit: {
       enabled: true,
@@ -78,13 +78,13 @@ const defaultConfig: Config = {
   },
   notifications: {
     maxFollowerNotifications: 10000, // Don't overload with huge follower lists
-    throttleMs: 0,                  // No throttling by default
-    maxContentSize: 10 * 1024       // 10KB
+    throttleMs: 0, // No throttling by default
+    maxContentSize: 10 * 1024 // 10KB
   },
   customSettings: {
-    appName: "WebSocket Server",
-    appVersion: "1.0.0",
-    adminContact: "admin@example.com",
+    appName: 'WebSocket Server',
+    appVersion: '1.0.0',
+    adminContact: 'admin@example.com',
     typingTimeout: 5000 // 5 second timeout for typing indicators
   }
 };
@@ -93,7 +93,7 @@ const defaultConfig: Config = {
  * Detects the running environment
  * @returns The detected environment (development, production, or iis)
  */
-export function detectEnvironment(): string {
+export function detectEnvironment (): string {
   if (process.env.IISNODE_VERSION) {
     return 'iis';
   }
@@ -105,21 +105,21 @@ export function detectEnvironment(): string {
  * @param forceReload Whether to force reload the config from disk
  * @returns The merged configuration with defaults
  */
-export function getConfiguration(forceReload = false): Config {
+export function getConfiguration (forceReload = false): Config {
   // Use static variable for caching config
   const environment = detectEnvironment();
-  
+
   if (!forceReload && _cachedConfig) {
     return _cachedConfig;
   }
-  
+
   console.log(`Loading configuration for environment: ${environment}`);
-  
+
   try {
     // First check for environment-specific config file
     const envConfigPath = path.join(__dirname, `../../config.${environment}.json`);
     const defaultConfigPath = path.join(__dirname, '../../config.json');
-    
+
     let configPath = defaultConfigPath;
     if (fs.existsSync(envConfigPath)) {
       configPath = envConfigPath;
@@ -127,17 +127,17 @@ export function getConfiguration(forceReload = false): Config {
     } else {
       console.log(`Using default config: ${defaultConfigPath}`);
     }
-    
+
     if (fs.existsSync(configPath)) {
       const configData = fs.readFileSync(configPath, 'utf8');
       const userConfig = JSON.parse(configData);
-      
+
       // Deep merge configuration with defaults
       const mergedConfig = deepMerge(defaultConfig, userConfig);
-      
+
       // Always set environment correctly
       mergedConfig.server.environment = environment;
-      
+
       console.log('Configuration loaded successfully');
       _cachedConfig = mergedConfig;
       return mergedConfig;
@@ -146,7 +146,7 @@ export function getConfiguration(forceReload = false): Config {
     console.warn('Error reading configuration file:', error);
     console.warn('Using default configuration');
   }
-  
+
   // Return default config with current environment set
   const defaultWithEnv = {
     ...defaultConfig,
@@ -155,7 +155,7 @@ export function getConfiguration(forceReload = false): Config {
       environment
     }
   };
-  
+
   _cachedConfig = defaultWithEnv;
   return defaultWithEnv;
 }
@@ -169,22 +169,22 @@ let _cachedConfig: Config | null = null;
  * @param environment Optional environment to save to (saves to config.{environment}.json)
  * @returns True if saved successfully, false otherwise
  */
-export function saveConfiguration(config: Config, environment?: string): boolean {
+export function saveConfiguration (config: Config, environment?: string): boolean {
   try {
     let configPath: string;
-    
+
     if (environment) {
       configPath = path.join(__dirname, `../../config.${environment}.json`);
     } else {
       configPath = path.join(__dirname, '../../config.json');
     }
-    
+
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
     console.log(`Configuration saved to: ${configPath}`);
-    
+
     // Update cached config
     _cachedConfig = config;
-    
+
     return true;
   } catch (error) {
     console.error('Error saving configuration:', error);
@@ -196,7 +196,7 @@ export function saveConfiguration(config: Config, environment?: string): boolean
  * Forces a reload of the configuration from disk
  * @returns The freshly loaded configuration
  */
-export function reloadConfiguration(): Config {
+export function reloadConfiguration (): Config {
   return getConfiguration(true);
 }
 
@@ -206,11 +206,11 @@ export function reloadConfiguration(): Config {
  * @param source The source object to merge from
  * @returns The merged object
  */
-function deepMerge<T extends object>(target: T, source: Partial<T>): T {
+function deepMerge<T extends object> (target: T, source: Partial<T>): T {
   if (!source) return target;
-  
-  const output = {...target};
-  
+
+  const output = { ...target };
+
   if (isObject(target) && isObject(source)) {
     Object.keys(source).forEach(key => {
       if (isObject(source[key as keyof typeof source])) {
@@ -227,10 +227,10 @@ function deepMerge<T extends object>(target: T, source: Partial<T>): T {
       }
     });
   }
-  
+
   return output;
 }
 
-function isObject(item: any): boolean {
+function isObject (item: any): boolean {
   return (item && typeof item === 'object' && !Array.isArray(item));
 }

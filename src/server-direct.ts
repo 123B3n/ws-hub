@@ -5,11 +5,11 @@ import fs from 'fs';
 
 // Determine if we're running under IIS via iisnode
 // Be more explicit about checking for IIS to avoid false positives
-const runningUnderIisNode = typeof process.env.IISNODE_VERSION === 'string' && 
+const runningUnderIisNode = typeof process.env.IISNODE_VERSION === 'string' &&
                            process.env.IISNODE_VERSION.length > 0;
 
 // Log the environment for debugging
-console.log('Environment check:', { 
+console.log('Environment check:', {
   NODE_ENV: process.env.NODE_ENV,
   IISNODE_VERSION: process.env.IISNODE_VERSION,
   runningUnderIisNode
@@ -35,15 +35,15 @@ certEvents.on('certificatesUpdated', () => {
 const setupDirectories = () => {
   // Directories needed for the application
   const dirs = [
-    path.join(__dirname, '../certs'), 
+    path.join(__dirname, '../certs'),
     path.join(__dirname, '../logs')
   ];
-  
+
   // Add iisnode logs directory if running under IIS
   if (runningUnderIisNode) {
     dirs.push(path.join(__dirname, '../iisnode'));
   }
-  
+
   // Create directories if they don't exist
   dirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
@@ -59,14 +59,14 @@ setupDirectories();
 // Start server with appropriate configuration
 const startServer = () => {
   const config = getConfiguration();
-  
+
   if (runningUnderIisNode) {
     console.log('Running under IIS with iisnode');
-    
+
     // IIS provides %WEBSITE_SITE_NAME% as an environment variable
     const siteName = process.env.WEBSITE_SITE_NAME || 'IIS Website';
     console.log(`Running as IIS website: ${siteName}`);
-    
+
     // Start the Socket.IO server with IIS-compatible configuration
     console.log('Starting Socket.IO server for IIS integration...');
     startSocketServer({
@@ -79,11 +79,11 @@ const startServer = () => {
   } else {
     // Standard standalone mode - flexible enough for both development and production
     console.log('Starting Socket.IO server in standalone mode...');
-    
+
     // Check if we have environment variables for ports (useful for containerization/cloud)
     const httpPort = process.env.HTTP_PORT ? parseInt(process.env.HTTP_PORT) : config.server.httpPort;
     const httpsPort = process.env.HTTPS_PORT ? parseInt(process.env.HTTPS_PORT) : config.server.httpsPort;
-    
+
     startSocketServer({
       httpPort,
       httpsPort,

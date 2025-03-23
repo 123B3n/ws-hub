@@ -13,23 +13,23 @@ interface CertificateInfo {
 
 const CERT_INFO_FILE = path.join(__dirname, '../../certs/cert-info.json');
 
-export async function generateSSLCertificate(): Promise<void> {
+export async function generateSSLCertificate (): Promise<void> {
   console.log('\nLet\'s Encrypt Certificate Generator');
   console.log('===================================');
-  
+
   try {
     // Create directory for certificates if it doesn't exist
     const certDir = path.join(__dirname, '../../certs');
     await fs.mkdir(certDir, { recursive: true });
-    
+
     // Check if certbot is installed
     const isCertbotInstalled = await checkCertbotInstalled();
-    
+
     if (!isCertbotInstalled) {
       console.log('\nCertbot is not installed. Installing Certbot...');
       await installCertbot();
     }
-    
+
     return new Promise((resolve, reject) => {
       promptForDomain(async (domain) => {
         promptForEmail(async (email) => {
@@ -39,23 +39,23 @@ export async function generateSSLCertificate(): Promise<void> {
             // Ask to remove previous domain's renewal configuration
             await promptForRenewalCleanup(existingCertInfo.domain);
           }
-          
+
           console.log(`\nRequesting Let's Encrypt certificate for: ${domain}`);
           console.log('This may take a moment...');
-          
+
           try {
             await requestLetsEncryptCertificate(domain, email, certDir);
-            
+
             // Setup auto-renewal
             await setupAutoRenewal(domain, certDir);
-            
+
             // Save certificate info for future reference
             await saveCertificateInfo({
               domain,
               renewalDate: new Date(Date.now() + (90 * 24 * 60 * 60 * 1000)), // 90 days from now
               installed: new Date()
             });
-            
+
             console.log('\nLet\'s Encrypt certificate obtained successfully!');
             console.log('Certificate will auto-renew approximately 30 days before expiration.');
             resolve();
@@ -73,7 +73,7 @@ export async function generateSSLCertificate(): Promise<void> {
 }
 
 // Function to prompt user about cleaning up previous domain's renewal configuration
-async function promptForRenewalCleanup(oldDomain: string): Promise<void> {
+async function promptForRenewalCleanup (oldDomain: string): Promise<void> {
   return new Promise((resolve) => {
     rl.question(`\nA certificate was previously generated for ${oldDomain}. Do you want to remove its auto-renewal configuration? (yes/no): `, async (answer) => {
       if (answer.toLowerCase() === 'yes' || answer.toLowerCase() === 'y') {
@@ -94,7 +94,7 @@ async function promptForRenewalCleanup(oldDomain: string): Promise<void> {
 }
 
 // Get saved certificate information
-async function getCertificateInfo(): Promise<CertificateInfo | null> {
+async function getCertificateInfo (): Promise<CertificateInfo | null> {
   try {
     const data = await fs.readFile(CERT_INFO_FILE, 'utf8');
     return JSON.parse(data) as CertificateInfo;
@@ -105,21 +105,21 @@ async function getCertificateInfo(): Promise<CertificateInfo | null> {
 }
 
 // Save certificate information for renewal tracking
-async function saveCertificateInfo(info: CertificateInfo): Promise<void> {
+async function saveCertificateInfo (info: CertificateInfo): Promise<void> {
   await fs.writeFile(CERT_INFO_FILE, JSON.stringify(info, null, 2), 'utf8');
 }
 
 // Remove renewal configuration for a domain
-async function removeRenewalConfiguration(domain: string): Promise<void> {
+async function removeRenewalConfiguration (domain: string): Promise<void> {
   const platform = os.platform();
   const isWindows = platform === 'win32';
-  
+
   return new Promise((resolve, reject) => {
     // Command to delete the renewal configuration
     const command = isWindows
       ? `certbot delete --cert-name ${domain} --non-interactive`
       : `sudo certbot delete --cert-name ${domain} --non-interactive`;
-    
+
     console.log(`Executing command: ${command}`);
     exec(command, (error, stdout, stderr) => {
       if (error) {
@@ -134,13 +134,13 @@ async function removeRenewalConfiguration(domain: string): Promise<void> {
 }
 
 // Setup automatic renewal
-async function setupAutoRenewal(domain: string, certDir: string): Promise<void> {
+async function setupAutoRenewal (domain: string, certDir: string): Promise<void> {
   const platform = os.platform();
   const isWindows = platform === 'win32';
-  
+
   // Log message about automatic renewal
   console.log('\nSetting up automatic certificate renewal...');
-  
+
   if (isWindows) {
     await setupWindowsAutoRenewal(domain, certDir);
   } else {
@@ -149,15 +149,15 @@ async function setupAutoRenewal(domain: string, certDir: string): Promise<void> 
 }
 
 // Setup auto-renewal on Windows
-async function setupWindowsAutoRenewal(domain: string, certDir: string): Promise<void> {
+async function setupWindowsAutoRenewal (domain: string, certDir: string): Promise<void> {
   try {
     // Create a batch script to run post-renewal to copy certificates to our app
     const hookDir = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'certbot', 'renewal-hooks', 'post');
     const scriptPath = path.join(hookDir, `copy-${domain.replace(/\./g, '-')}-certs.bat`);
-    
+
     // Get the absolute path to the application directory
     const appDir = path.resolve(path.join(__dirname, '../..'));
-    
+
     // Windows uses %VARIABLE% syntax in batch files
     const scriptContent = `@echo off
 echo Copying renewed certificates for ${domain} to application directory
@@ -170,11 +170,11 @@ echo Certificate update complete - automatic hot reload will occur through file 
 
     // Ensure hook directory exists
     await fs.mkdir(hookDir, { recursive: true });
-    
+
     // Write the script file
     await fs.writeFile(scriptPath, scriptContent, 'utf8');
     console.log(`Created post-renewal hook script at ${scriptPath}`);
-    
+
     // Check if the Windows Task Scheduler already has a Certbot renewal task
     console.log('Checking for existing Certbot renewal task in Windows Task Scheduler...');
     const checkTask = new Promise<boolean>((resolve) => {
@@ -182,12 +182,12 @@ echo Certificate update complete - automatic hot reload will occur through file 
         resolve(!error); // Task exists if there's no error
       });
     });
-    
+
     if (!await checkTask) {
       console.log('Creating Certbot renewal task in Windows Task Scheduler...');
       // Create a scheduled task to run certbot renew daily
       const taskCommand = 'schtasks /create /tn "Certbot Renewal" /tr "certbot renew" /sc daily /st 00:00 /ru SYSTEM';
-      
+
       await new Promise<void>((resolve, reject) => {
         exec(taskCommand, (error, stdout, stderr) => {
           if (error) {
@@ -211,13 +211,13 @@ echo Certificate update complete - automatic hot reload will occur through file 
 }
 
 // Setup auto-renewal on Linux
-async function setupLinuxAutoRenewal(domain: string, certDir: string): Promise<void> {
+async function setupLinuxAutoRenewal (domain: string, certDir: string): Promise<void> {
   try {
     // Create a shell script to run post-renewal to copy certificates to our app
     const hookDir = '/etc/letsencrypt/renewal-hooks/post';
     const scriptName = `copy-${domain.replace(/\./g, '-')}-certs.sh`;
     const scriptPath = path.join(hookDir, scriptName);
-    
+
     const scriptContent = `#!/bin/bash
 echo "Copying renewed certificates for ${domain} to application directory"
 sudo cp /etc/letsencrypt/live/${domain}/privkey.pem ${path.join(certDir, 'key.pem')}
@@ -231,7 +231,7 @@ echo "Certificate update complete - automatic hot reload will occur through file
     // Write the script to a temp file first since we need sudo to write to the hooks directory
     const tempScriptPath = path.join('/tmp', scriptName);
     await fs.writeFile(tempScriptPath, scriptContent, 'utf8');
-    
+
     // Copy the script to the hooks directory and make it executable
     console.log('Installing post-renewal hook script...');
     await new Promise<void>((resolve, reject) => {
@@ -245,7 +245,7 @@ echo "Certificate update complete - automatic hot reload will occur through file
         }
       });
     });
-    
+
     // Check if crontab already has the certbot renewal entry
     console.log('Checking for existing certbot renewal cron job...');
     const hasCronEntry = await new Promise<boolean>((resolve) => {
@@ -253,7 +253,7 @@ echo "Certificate update complete - automatic hot reload will occur through file
         resolve(!error); // Entry exists if there's no error
       });
     });
-    
+
     if (!hasCronEntry) {
       console.log('Setting up cron job for certificate renewal...');
       // Add a cron job to run certbot renew twice daily (standard practice)
@@ -279,11 +279,11 @@ echo "Certificate update complete - automatic hot reload will occur through file
   }
 }
 
-function promptForDomain(callback: (domain: string) => void): void {
+function promptForDomain (callback: (domain: string) => void): void {
   rl.question('Enter domain name (must be publicly accessible): ', (domain) => {
     // Simple domain validation - checks for basic domain name format
     const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
-    
+
     if (!domain || !domainRegex.test(domain)) {
       console.log('\nPlease enter a valid domain name (e.g., example.com).');
       // Re-prompt for domain
@@ -294,11 +294,11 @@ function promptForDomain(callback: (domain: string) => void): void {
   });
 }
 
-function promptForEmail(callback: (email: string) => void): void {
+function promptForEmail (callback: (email: string) => void): void {
   rl.question('Enter your email address (for Let\'s Encrypt notifications): ', (email) => {
     // Simple email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
+
     if (!email || !emailRegex.test(email)) {
       console.log('\nPlease enter a valid email address (e.g., user@example.com).');
       // Re-prompt for email
@@ -309,7 +309,7 @@ function promptForEmail(callback: (email: string) => void): void {
   });
 }
 
-async function checkCertbotInstalled(): Promise<boolean> {
+async function checkCertbotInstalled (): Promise<boolean> {
   return new Promise((resolve) => {
     exec('certbot --version', (error) => {
       if (error) {
@@ -321,16 +321,16 @@ async function checkCertbotInstalled(): Promise<boolean> {
   });
 }
 
-async function installCertbot(): Promise<void> {
+async function installCertbot (): Promise<void> {
   return new Promise((resolve, reject) => {
     const platform = os.platform();
     let installCommand: string;
-    
+
     if (platform === 'win32') {
       // Windows installation using Chocolatey
       console.log('Installing Certbot using Chocolatey on Windows...');
       console.log('First, checking if Chocolatey is installed...');
-      
+
       exec('choco --version', (error) => {
         if (error) {
           console.log('Chocolatey not found. Please install Chocolatey first:');
@@ -339,7 +339,7 @@ async function installCertbot(): Promise<void> {
           reject(new Error('Chocolatey not installed'));
           return;
         }
-        
+
         console.log('Installing Certbot using Chocolatey...');
         exec('choco install certbot -y', (error, stdout, stderr) => {
           if (error) {
@@ -358,7 +358,7 @@ async function installCertbot(): Promise<void> {
           reject(new Error('Could not determine Linux distribution'));
           return;
         }
-        
+
         if (stdout.includes('Ubuntu') || stdout.includes('Debian')) {
           installCommand = 'sudo apt update && sudo apt install -y certbot';
         } else if (stdout.includes('CentOS') || stdout.includes('Red Hat') || stdout.includes('Fedora')) {
@@ -369,7 +369,7 @@ async function installCertbot(): Promise<void> {
           reject(new Error('Unsupported Linux distribution'));
           return;
         }
-        
+
         console.log(`Installing Certbot on Linux using: ${installCommand}`);
         exec(installCommand, (error, stdout, stderr) => {
           if (error) {
@@ -387,14 +387,14 @@ async function installCertbot(): Promise<void> {
   });
 }
 
-async function requestLetsEncryptCertificate(domain: string, email: string, certDir: string): Promise<void> {
+async function requestLetsEncryptCertificate (domain: string, email: string, certDir: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const platform = os.platform();
     const isWindows = platform === 'win32';
-    
+
     // We'll use the standalone plugin which temporarily starts its own web server
     const certbotCommand = `${isWindows ? '' : 'sudo '}certbot certonly --standalone --agree-tos --non-interactive --email ${email} -d ${domain}`;
-    
+
     console.log(`Running command: ${certbotCommand}`);
     exec(certbotCommand, async (error, stdout, stderr) => {
       if (error) {
@@ -402,24 +402,24 @@ async function requestLetsEncryptCertificate(domain: string, email: string, cert
         reject(error);
         return;
       }
-      
+
       console.log(stdout);
-      
+
       try {
         // Find certificates dynamically by running certbot certificates command
         const certPaths = await findCertificatePaths(domain, isWindows);
-        
+
         if (!certPaths) {
           throw new Error(`Could not find certificate paths for domain: ${domain}`);
         }
-        
+
         // Copy certificates to our application's cert directory
         if (isWindows) {
           await copyWindowsCerts(certPaths.privkey, certPaths.fullchain, certDir);
         } else {
           await copyLinuxCerts(certPaths.privkey, certPaths.fullchain, certDir);
         }
-        
+
         console.log(`Certificates copied to application directory: ${certDir}`);
         resolve();
       } catch (copyError) {
@@ -430,10 +430,10 @@ async function requestLetsEncryptCertificate(domain: string, email: string, cert
   });
 }
 
-async function findCertificatePaths(domain: string, isWindows: boolean): Promise<{privkey: string, fullchain: string} | null> {
+async function findCertificatePaths (domain: string, isWindows: boolean): Promise<{privkey: string, fullchain: string} | null> {
   return new Promise((resolve) => {
     const certbotCommand = `${isWindows ? '' : 'sudo '}certbot certificates`;
-    
+
     console.log('Detecting certificate paths...');
     exec(certbotCommand, (error, stdout, stderr) => {
       if (error) {
@@ -441,27 +441,27 @@ async function findCertificatePaths(domain: string, isWindows: boolean): Promise
         resolve(null);
         return;
       }
-      
+
       console.log('Parsing certificate information...');
-      
+
       // Extract certificate paths from certbot's output
       const output = stdout.toString();
       console.log('Certificate info:', output);
-      
+
       let privkeyPath = '';
       let fullchainPath = '';
-      
+
       // Try to extract the paths from certbot output
       const lines = output.split('\n');
       let foundDomain = false;
-      
+
       for (const line of lines) {
         // Look for the domain first
         if (line.includes(`Domains: ${domain}`)) {
           foundDomain = true;
           continue;
         }
-        
+
         if (foundDomain) {
           if (line.includes('Certificate Path:')) {
             const certPathMatch = line.match(/Certificate Path: (.+)/);
@@ -489,7 +489,7 @@ async function findCertificatePaths(domain: string, isWindows: boolean): Promise
           }
         }
       }
-      
+
       if (privkeyPath && fullchainPath) {
         console.log(`Found certificate paths for ${domain}:`);
         console.log(`Private Key: ${privkeyPath}`);
@@ -497,7 +497,7 @@ async function findCertificatePaths(domain: string, isWindows: boolean): Promise
         resolve({ privkey: privkeyPath, fullchain: fullchainPath });
       } else {
         console.log(`Could not find certificate paths for ${domain} in certbot output.`);
-        
+
         // Fallback to default paths
         if (isWindows) {
           const basePath = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'certbot', 'live', domain);
@@ -507,24 +507,24 @@ async function findCertificatePaths(domain: string, isWindows: boolean): Promise
           privkeyPath = `/etc/letsencrypt/live/${domain}/privkey.pem`;
           fullchainPath = `/etc/letsencrypt/live/${domain}/fullchain.pem`;
         }
-        
-        console.log(`Using fallback paths:`);
+
+        console.log('Using fallback paths:');
         console.log(`Private Key: ${privkeyPath}`);
         console.log(`Full Chain: ${fullchainPath}`);
-        
+
         resolve({ privkey: privkeyPath, fullchain: fullchainPath });
       }
     });
   });
 }
 
-async function copyWindowsCerts(privkeyPath: string, fullchainPath: string, destination: string): Promise<void> {
+async function copyWindowsCerts (privkeyPath: string, fullchainPath: string, destination: string): Promise<void> {
   // Windows requires specific commands to copy potentially protected files
   const copyCommands = [
     `copy "${privkeyPath}" "${path.join(destination, 'key.pem')}"`,
-    `copy "${fullchainPath}" "${path.join(destination, 'cert.pem')}"`,
+    `copy "${fullchainPath}" "${path.join(destination, 'cert.pem')}"`
   ];
-  
+
   console.log('Executing Windows copy commands:');
   for (const command of copyCommands) {
     console.log(`> ${command}`);
@@ -543,14 +543,14 @@ async function copyWindowsCerts(privkeyPath: string, fullchainPath: string, dest
   }
 }
 
-async function copyLinuxCerts(privkeyPath: string, fullchainPath: string, destination: string): Promise<void> {
+async function copyLinuxCerts (privkeyPath: string, fullchainPath: string, destination: string): Promise<void> {
   // Linux requires sudo to access Let's Encrypt certificates
   const copyCommands = [
     `sudo cp "${privkeyPath}" "${path.join(destination, 'key.pem')}"`,
     `sudo cp "${fullchainPath}" "${path.join(destination, 'cert.pem')}"`,
-    `sudo chmod 644 "${path.join(destination, '*.pem')}"`,
+    `sudo chmod 644 "${path.join(destination, '*.pem')}"`
   ];
-  
+
   console.log('Executing Linux copy commands:');
   for (const command of copyCommands) {
     console.log(`> ${command}`);
