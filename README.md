@@ -2,13 +2,14 @@
 
 <div align="center">
 
-[![Build Status](https://github.com/123B3n/ws-hub/workflows/Build%20and%20Test/badge.svg)](https://github.com/123B3n/ws-hub/actions)
+[![Build and Release](https://github.com/123B3n/ws-hub/workflows/Build%20and%20Release/badge.svg)](https://github.com/123B3n/ws-hub/actions/workflows/manual-build-release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/123B3n/ws-hub)](https://github.com/123B3n/ws-hub/releases)
 [![GitHub package.json version](https://img.shields.io/github/package-json/v/123B3n/ws-hub)](package.json)
-[![License](https://img.shields.io/github/license/123B3n/ws-hub)](LICENSE)
-[![Dependencies Status](https://status.david-dm.org/gh/123B3n/ws-hub.svg)](https://david-dm.org/123B3n/ws-hub)
-[![Node.js Version](https://img.shields.io/node/v/ws-hub)](package.json)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![GitHub Issues](https://img.shields.io/github/issues/123B3n/ws-hub)](https://github.com/123B3n/ws-hub/issues)
+[![Required Node.js](https://img.shields.io/badge/node-%3E%3D14-blue)](package.json)
 [![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/123B3n/ws-hub)](https://github.com/123B3n/ws-hub)
+[![Last Commit](https://img.shields.io/github/last-commit/123B3n/ws-hub)](https://github.com/123B3n/ws-hub/commits)
 
 </div>
 
@@ -131,4 +132,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.

@@ -87,6 +87,10 @@ git push origin feature/my-new-feature
 * Check the GitHub issues for tasks
 * Help others in the community
 
+## License
+
+By contributing to WS-Hub, you agree that your contributions will be licensed under the GNU General Public License v3.0 (GPL-3.0).
+
 ## Questions?
 
 Don't hesitate to ask questions in our GitHub discussions or Discord server.
