@@ -128,7 +128,7 @@ jobs:
         prerelease: ${{ github.event.inputs.prerelease }}
         files: release/server-${{ github.event.inputs.version }}.zip
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
     
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
