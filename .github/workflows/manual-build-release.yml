@@ -37,7 +37,13 @@ jobs:
     
     - name: Update version in package.json
       run: |
-        npm version ${{ github.event.inputs.version }} --no-git-tag-version
+        # Use node to directly modify package.json
+        node -e "
+          const fs = require('fs');
+          const package = JSON.parse(fs.readFileSync('package.json'));
+          package.version = '${{ github.event.inputs.version }}';
+          fs.writeFileSync('package.json', JSON.stringify(package, null, 2));
+        "
         echo "Version updated to ${{ github.event.inputs.version }}"
     
     - name: Update version in configurations
