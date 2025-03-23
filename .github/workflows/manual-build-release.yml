@@ -65,7 +65,7 @@ jobs:
         # Copy build files
         cp -r dist release/server-${{ github.event.inputs.version }}/
         cp -r example release/server-${{ github.event.inputs.version }}/
-        cp -r client-example.html release/server-${{ github.event.inputs.version }}/
+        cp -r library release/server-${{ github.event.inputs.version }}/
         
         # Copy configuration files
         cp config.json release/server-${{ github.event.inputs.version }}/
